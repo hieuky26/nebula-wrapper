@@ -82,25 +82,26 @@ jobs:
       - name: Build IPA đã ký
         if: env.IOS_CERTIFICATE != '' && env.IOS_MOBILE_PROVISION != ''
         run: npx tauri ios build --ci --export-method "${{ vars.IOS_EXPORT_METHOD || 'release-testing' }}"
-      # Chưa có chứng chỉ: build bản Simulator bằng xcodebuild và tắt hẳn việc ký,
-      # vì `tauri ios build` luôn chạy archive + export nên bắt buộc phải có Team/chứng chỉ.
+      # Chưa có chứng chỉ: build bản Simulator, bỏ qua ký (--no-sign).
+      # Phải đi qua `tauri ios build` vì build phase Rust trong Xcode cần CLI Tauri đang chạy.
       - name: Build Simulator (không cần ký)
         if: env.IOS_CERTIFICATE == '' || env.IOS_MOBILE_PROVISION == ''
+        run: npx tauri ios build --ci --debug --no-sign --target aarch64-sim
+      # Nén bằng ditto để giữ quyền thực thi của file trong .app (upload-artifact làm mất quyền này).
+      - name: Đóng gói kết quả iOS
         run: |
           set -euo pipefail
-          PROJ=$(ls -d src-tauri/gen/apple/*.xcodeproj | head -1)
-          SCHEME=$(xcodebuild -list -json -project "$PROJ" | python3 -c 'import json,sys; s=json.load(sys.stdin)["project"]["schemes"]; print(next(x for x in s if x.endswith("_iOS")))')
-          echo "Project: $PROJ  Scheme: $SCHEME"
-          xcodebuild -project "$PROJ" -scheme "$SCHEME" \
-            -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -arch arm64 \
-            -derivedDataPath src-tauri/gen/apple/build/sim \
-            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build
+          mkdir -p ios-out
+          find src-tauri/gen/apple/build -maxdepth 3 -name "*.ipa" -exec cp {} ios-out/ \;
+          find src-tauri/gen/apple/build -maxdepth 3 -type d -name "*.app" -not -path '*.xcarchive/*' | while read -r app; do
+            ditto -c -k --keepParent "$app" "ios-out/$(basename "$app" .app)-simulator-arm64.zip"
+          done
+          ls -la ios-out
+          test -n "$(ls -A ios-out)"
       - uses: actions/upload-artifact@v5
         with:
           name: nebula-ios
-          path: |
-            src-tauri/gen/apple/build/**/*.ipa
-            src-tauri/gen/apple/build/**/*.app
+          path: ios-out/*
           if-no-files-found: error
 
   release:
@@ -111,7 +112,7 @@ jobs:
       - uses: actions/download-artifact@v5
         with: { path: out, pattern: "nebula-*" }
       - name: Checksums
-        run: cd out && find . -type f \( -name '*.AppImage' -o -name '*.deb' -o -name '*.rpm' -o -name '*.exe' -o -name '*.msi' -o -name '*.ipa' \) -exec sha256sum {} + > SHA256SUMS
+        run: cd out && find . -type f \( -name '*.AppImage' -o -name '*.deb' -o -name '*.rpm' -o -name '*.exe' -o -name '*.msi' -o -name '*.ipa' -o -name '*-simulator-*.zip' \) -exec sha256sum {} + > SHA256SUMS
       - uses: softprops/action-gh-release@v2
         with:
           draft: true
