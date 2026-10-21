@@ -63,12 +63,29 @@ jobs:
     runs-on: macos-latest
     # Lỗi iOS không chặn việc tạo bản Windows/Linux.
     continue-on-error: true
-    env:
-      APPLE_DEVELOPMENT_TEAM: ${{ secrets.APPLE_DEVELOPMENT_TEAM }}
-      IOS_CERTIFICATE: ${{ secrets.IOS_CERTIFICATE }}
-      IOS_CERTIFICATE_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
-      IOS_MOBILE_PROVISION: ${{ secrets.IOS_MOBILE_PROVISION }}
     steps:
+      # Tauri coi biến môi trường RỖNG là "có giá trị" (Team ID rỗng -> lỗi
+      # "`apple.development-team` is empty"; chứng chỉ rỗng -> lỗi import).
+      # Vì vậy chỉ xuất biến nào thực sự có secret.
+      - name: Nạp secrets Apple (nếu có)
+        env:
+          S_TEAM: ${{ secrets.APPLE_DEVELOPMENT_TEAM }}
+          S_CERT: ${{ secrets.IOS_CERTIFICATE }}
+          S_CERT_PW: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
+          S_PROFILE: ${{ secrets.IOS_MOBILE_PROVISION }}
+        run: |
+          put() { if [ -n "$2" ]; then { echo "$1<<__EOF__"; echo "$2"; echo "__EOF__"; } >> "$GITHUB_ENV"; fi; }
+          put APPLE_DEVELOPMENT_TEAM   "$S_TEAM"
+          if [ -n "$S_CERT" ] && [ -n "$S_CERT_PW" ] && [ -n "$S_PROFILE" ]; then
+            put IOS_CERTIFICATE          "$S_CERT"
+            put IOS_CERTIFICATE_PASSWORD "$S_CERT_PW"
+            put IOS_MOBILE_PROVISION     "$S_PROFILE"
+            echo "IOS_SIGNED=1" >> "$GITHUB_ENV"
+            echo "Có đủ chứng chỉ: build IPA đã ký."
+          else
+            echo "IOS_SIGNED=0" >> "$GITHUB_ENV"
+            echo "Chưa có chứng chỉ Apple: chỉ build bản Simulator (không ký)."
+          fi
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
         with: { node-version: 22, cache: npm }
@@ -80,12 +97,12 @@ jobs:
       - name: Tạo dự án Xcode (nếu chưa commit src-tauri/gen/apple)
         run: test -d src-tauri/gen/apple || npx tauri ios init --ci
       - name: Build IPA đã ký
-        if: env.IOS_CERTIFICATE != '' && env.IOS_MOBILE_PROVISION != ''
+        if: env.IOS_SIGNED == '1'
         run: npx tauri ios build --ci --export-method "${{ vars.IOS_EXPORT_METHOD || 'release-testing' }}"
       # Chưa có chứng chỉ: build bản Simulator, bỏ qua ký (--no-sign).
       # Phải đi qua `tauri ios build` vì build phase Rust trong Xcode cần CLI Tauri đang chạy.
       - name: Build Simulator (không cần ký)
-        if: env.IOS_CERTIFICATE == '' || env.IOS_MOBILE_PROVISION == ''
+        if: env.IOS_SIGNED != '1'
         run: npx tauri ios build --ci --debug --no-sign --target aarch64-sim
       # Nén bằng ditto để giữ quyền thực thi của file trong .app (upload-artifact làm mất quyền này).
       - name: Đóng gói kết quả iOS
