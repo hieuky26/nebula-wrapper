@@ -38,8 +38,8 @@ jobs:
               src-tauri/target/release/bundle/msi/*.msi
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with: { node-version: 22, cache: npm }
       - uses: dtolnay/rust-toolchain@stable
       - uses: swatinem/rust-cache@v2
@@ -53,7 +53,7 @@ jobs:
       - name: Unit tests (chính sách điều hướng)
         run: cargo test --manifest-path src-tauri/Cargo.toml
       - run: npx tauri build --bundles ${{ matrix.bundles }}
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: nebula-${{ matrix.name }}
           path: ${{ matrix.files }}
@@ -61,14 +61,16 @@ jobs:
 
   ios:
     runs-on: macos-latest
+    # Lỗi iOS không chặn việc tạo bản Windows/Linux.
+    continue-on-error: true
     env:
       APPLE_DEVELOPMENT_TEAM: ${{ secrets.APPLE_DEVELOPMENT_TEAM }}
       IOS_CERTIFICATE: ${{ secrets.IOS_CERTIFICATE }}
       IOS_CERTIFICATE_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
       IOS_MOBILE_PROVISION: ${{ secrets.IOS_MOBILE_PROVISION }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with: { node-version: 22, cache: npm }
       - uses: dtolnay/rust-toolchain@stable
         with: { targets: "aarch64-apple-ios,aarch64-apple-ios-sim,x86_64-apple-ios" }
@@ -80,10 +82,20 @@ jobs:
       - name: Build IPA đã ký
         if: env.IOS_CERTIFICATE != '' && env.IOS_MOBILE_PROVISION != ''
         run: npx tauri ios build --ci --export-method "${{ vars.IOS_EXPORT_METHOD || 'release-testing' }}"
+      # Chưa có chứng chỉ: build bản Simulator bằng xcodebuild và tắt hẳn việc ký,
+      # vì `tauri ios build` luôn chạy archive + export nên bắt buộc phải có Team/chứng chỉ.
       - name: Build Simulator (không cần ký)
         if: env.IOS_CERTIFICATE == '' || env.IOS_MOBILE_PROVISION == ''
-        run: npx tauri ios build --ci --debug --target aarch64-sim
-      - uses: actions/upload-artifact@v4
+        run: |
+          set -euo pipefail
+          PROJ=$(ls -d src-tauri/gen/apple/*.xcodeproj | head -1)
+          SCHEME=$(xcodebuild -list -json -project "$PROJ" | python3 -c 'import json,sys; s=json.load(sys.stdin)["project"]["schemes"]; print(next(x for x in s if x.endswith("_iOS")))')
+          echo "Project: $PROJ  Scheme: $SCHEME"
+          xcodebuild -project "$PROJ" -scheme "$SCHEME" \
+            -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -arch arm64 \
+            -derivedDataPath src-tauri/gen/apple/build/sim \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build
+      - uses: actions/upload-artifact@v5
         with:
           name: nebula-ios
           path: |
@@ -96,7 +108,7 @@ jobs:
     needs: [desktop, ios]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v5
         with: { path: out, pattern: "nebula-*" }
       - name: Checksums
         run: cd out && find . -type f \( -name '*.AppImage' -o -name '*.deb' -o -name '*.rpm' -o -name '*.exe' -o -name '*.msi' -o -name '*.ipa' \) -exec sha256sum {} + > SHA256SUMS
