@@ -1,0 +1,9 @@
+node_modules/
+dist/
+src-tauri/target/
+src-tauri/gen/schemas/
+# Dự án Xcode sinh ra bởi `tauri ios init`. Nên commit sau lần init đầu tiên nếu bạn chỉnh trong Xcode.
+# src-tauri/gen/apple/
+*.p12
+*.mobileprovision
+.DS_Store

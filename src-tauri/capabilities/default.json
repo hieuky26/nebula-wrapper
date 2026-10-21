@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Cố ý KHÔNG cấp quyền nào. Trang cục bộ và trang Nebula (remote) đều không gọi được lệnh Tauri/plugin nào qua IPC.",
+  "windows": ["main"],
+  "permissions": []
+}

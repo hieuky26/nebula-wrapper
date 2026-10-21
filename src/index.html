@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Zyxel Nebula</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main>
+    <img class="logo" src="logo.png" alt="" width="96" height="96">
+    <h1>Zyxel Nebula</h1>
+    <div id="loading">
+      <div class="spinner" aria-hidden="true"></div>
+      <p>Đang kết nối tới Nebula…</p>
+    </div>
+    <div id="error" hidden>
+      <p class="err-title">Không thể kết nối tới Nebula</p>
+      <p class="err-detail" id="err-detail">Kiểm tra kết nối mạng rồi thử lại.</p>
+      <button id="retry" type="button">Thử lại</button>
+    </div>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>

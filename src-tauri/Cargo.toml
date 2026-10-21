@@ -1,0 +1,32 @@
+[package]
+name = "nebula-wrapper"
+version = "1.0.0"
+description = "Zyxel Nebula wrapper"
+edition = "2021"
+publish = false
+
+[lib]
+# Tên khác tên binary để tránh xung đột trên Windows; staticlib/cdylib cần cho iOS/Android.
+name = "nebula_wrapper_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2.12", features = [] }
+tauri-plugin-opener = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+url = "2"
+
+# Chỉ dùng trên iOS để bật cử chỉ vuốt quay lại của WKWebView.
+[target.'cfg(target_os = "ios")'.dependencies]
+objc2 = "0.6"
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+panic = "abort"
+strip = true

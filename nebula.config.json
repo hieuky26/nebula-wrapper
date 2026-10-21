@@ -1,0 +1,12 @@
+{
+  "_comment": "Cấu hình duy nhất cần sửa khi đổi domain. Được nhúng vào binary lúc build (rebuild sau khi sửa).",
+  "startUrl": "https://nebula.zyxel.com/",
+  "mainHosts": ["nebula.zyxel.com"],
+  "authHosts": [
+    "account.zyxel.com",
+    "appleid.apple.com",
+    "login.microsoftonline.com",
+    "login.live.com"
+  ],
+  "externalLinks": "open-in-browser"
+}

@@ -1,0 +1,20 @@
+{
+  "name": "nebula-wrapper",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Ứng dụng wrapper chuyên dụng cho Zyxel Nebula (Tauri v2)",
+  "scripts": {
+    "tauri": "tauri",
+    "dev": "tauri dev",
+    "build": "tauri build",
+    "icon": "tauri icon app-icon.png",
+    "check-env": "bash scripts/check-env.sh",
+    "build-all": "bash build-all.sh",
+    "ios:init": "tauri ios init",
+    "ios:dev": "tauri ios dev",
+    "ios:build": "tauri ios build"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "~2.12.3"
+  }
+}
