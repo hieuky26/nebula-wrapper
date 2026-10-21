@@ -7,7 +7,7 @@
     "tauri": "tauri",
     "dev": "tauri dev",
     "build": "tauri build",
-    "icon": "tauri icon app-icon.png",
+    "icon": "tauri icon app-icon.png --ios-color #3c9f00",
     "check-env": "bash scripts/check-env.sh",
     "build-all": "bash build-all.sh",
     "ios:init": "tauri ios init",
